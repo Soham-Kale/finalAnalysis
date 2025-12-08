@@ -3,8 +3,21 @@ import { Chess } from 'chess.js';
 export const parsePGNToPositions = (pgn) => {
   const chess = new Chess();
   try {
-    chess.loadPgn(pgn);
+    // Clean PGN string
+    const cleanedPgn = pgn
+      .replace(/\[.*?\]/g, '') // Remove headers
+      .replace(/\{.*?\}/g, '') // Remove comments
+      .replace(/\s+/g, ' ')    // Normalize whitespace
+      .trim();
+
+    chess.loadPgn(cleanedPgn);
     const history = chess.history({ verbose: true });
+    
+    if (history.length === 0 && cleanedPgn.length > 10) {
+        // Fallback: If no moves parsed but text exists, maybe it's just moves without numbers?
+        // chess.js requires move numbers usually.
+    }
+
     const positions = [];
     let tempChess = new Chess(); // Fresh instance for incremental loading
 

@@ -1,4 +1,3 @@
-// components/StockfishWebView.js
 import React, { forwardRef, useImperativeHandle } from 'react';
 import { WebView } from 'react-native-webview';
 

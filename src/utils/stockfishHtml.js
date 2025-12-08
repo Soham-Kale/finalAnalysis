@@ -1,103 +1,174 @@
-export const getStockfishHtml = () => `
+export const getStockfishHtml = () => ` 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-  <div id="debug">Initializing...</div>
+  <title>Stockfish Worker</title>
   <script>
-    const debugDiv = document.getElementById('debug');
-    function log(msg) {
-      console.log(msg);
-      debugDiv.innerText = msg;
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: msg }));
+    let stockfish;
+    const STOCKFISH_URL = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
+
+    // ✅ NEW: helper to parse "info" lines from Stockfish
+    function parseInfoLine(data) {
+      if (typeof data !== 'string') return null;
+      if (!data.startsWith('info ')) return null;
+
+      const tokens = data.trim().split(/\\s+/);
+      const scoreIndex = tokens.indexOf('score');
+      if (scoreIndex === -1 || scoreIndex + 2 >= tokens.length) return null;
+
+      const scoreType = tokens[scoreIndex + 1];   // 'cp' or 'mate'
+      const scoreValue = parseInt(tokens[scoreIndex + 2], 10);
+
+      const pvIndex = tokens.indexOf('pv');
+      const pvMoves = pvIndex !== -1 ? tokens.slice(pvIndex + 1) : [];
+
+      return {
+        scoreType,   // 'cp' | 'mate'
+        scoreValue,  // number
+        pvMoves      // array of UCI moves: ['e2e4','e7e5',...]
+      };
     }
 
-    let engine;
-    let pendingCommands = [];
-
-    async function initEngine() {
+    async function initStockfish() {
       try {
-        log('Fetching Stockfish script...');
-        // Fetch the script content
-        const response = await fetch('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js');
-        if (!response.ok) throw new Error('Failed to fetch script: ' + response.status);
+        console.log('Fetching Stockfish from:', STOCKFISH_URL);
+        const response = await fetch(STOCKFISH_URL);
+        if (!response.ok) throw new Error('Failed to fetch stockfish.js: ' + response.statusText);
         
         const scriptContent = await response.text();
-        log('Script fetched. Creating Blob...');
-        
-        // Create a Blob from the script content
         const blob = new Blob([scriptContent], { type: 'application/javascript' });
         const workerUrl = URL.createObjectURL(blob);
-        log('Blob created: ' + workerUrl);
 
-        // Initialize Worker from Blob URL
-        engine = new Worker(workerUrl);
+        stockfish = new Worker(workerUrl);
         
-        engine.onmessage = function(event) {
-          const line = event.data;
-          // log('Engine: ' + line); // Verbose logging
-          
-          if (line === 'uciok' || line === 'readyok') {
-            log('Engine ready: ' + line);
-            // Process any pending commands after initialization
-            pendingCommands.forEach(cmd => engine.postMessage(cmd));
-            pendingCommands = [];
-            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'response', line: line }));
+        stockfish.onerror = function(e) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'error',
+            message: 'Worker Error: ' + (e.message || String(e))
+          }));
+        };
+        
+        stockfish.onmessage = function(event) {
+          const data = event.data;
+
+          // (Optional) raw debug:
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'debug',
+            message: 'SF: ' + data
+          }));
+
+          // ✅ NEW: parse "info" lines for eval + PV
+          const parsedInfo = parseInfoLine(data);
+          if (parsedInfo) {
+            const { scoreType, scoreValue, pvMoves } = parsedInfo;
+
+            let evalCp = null;
+            let mateIn = null;
+
+            if (scoreType === 'cp') {
+              evalCp = scoreValue;      // centipawns from side-to-move POV
+            } else if (scoreType === 'mate') {
+              mateIn = scoreValue;      // mate in N (positive: you mate, negative: you get mated)
+            }
+
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'analysis_update',   // 🔹 continuous updates while thinking
+              data: {
+                evalCp,                 // e.g. 34 = +0.34
+                mateIn,                 // e.g. 3 = mate in 3
+                pv: pvMoves,            // ['e2e4','e7e5','g1f3',...]
+                raw: data               // full raw line if you want
+              }
+            }));
           }
-          // Forward all engine lines to RN
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'engine_line', line: line }));
+
+          if (data === 'readyok') {
+            console.log('Stockfish engine ready');
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'engine_ready'
+            }));
+          }
+
+          // ✅ Your existing bestmove handling (kept)
+          if (typeof data === 'string' && data.startsWith('bestmove')) {
+            const match = data.match(/bestmove\\s+(\\S+)/);
+            if (match) {
+              const bestMove = match[1];
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'analysis_result',   // 🔹 final result for this search
+                data: {
+                  bestMove: bestMove,
+                  raw: data
+                }
+              }));
+            }
+          }
         };
 
-        engine.onerror = function(err) {
-          log('Worker error: ' + err.message);
-        };
-
-        // Initialize UCI
-        log('Sending UCI...');
-        engine.postMessage('uci');
-        
-        // Wait a bit and check readiness
-        setTimeout(() => {
-             engine.postMessage('isready');
-        }, 500);
+        stockfish.postMessage('uci');
+        stockfish.postMessage('isready');
 
       } catch (e) {
-        log('Init error: ' + e.message);
+        console.error('Stockfish Init Error:', e);
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'error',
+          message: 'Init failed: ' + e.message
+        }));
       }
     }
 
-    initEngine();
-
-    // Listen for commands from React Native
-    window.addEventListener('message', (event) => {
-      try {
-        // Handle both string and object data
-        let data = event.data;
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                // If not JSON, ignore or handle as raw string if needed
-            }
+    // Handle messages from React Native
+    document.addEventListener('message', function(event) {
+      handleRNMessage(event);
+    });
+    
+    window.addEventListener('message', function(event) {
+      if (event.data && typeof event.data === 'string') {
+        try {
+          JSON.parse(event.data);
+          handleRNMessage(event);
+        } catch(e) {
+          // ignore non-json
         }
-
-        if (data && data.type === 'command') {
-          const cmd = data.command;
-          log('CMD: ' + cmd);
-          if (engine && !pendingCommands.length) {
-            engine.postMessage(cmd);
-          } else {
-            pendingCommands.push(cmd);
-          }
-        }
-      } catch (e) {
-        log('Message parse error: ' + e.message);
       }
     });
+
+    function handleRNMessage(event) {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('Message from RN:', message);
+
+        if (!stockfish) return;
+
+        if (message.type === 'analyze') {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'debug',
+            message: 'Starting analysis for FEN: ' + message.fen
+          }));
+          
+          stockfish.postMessage('position fen ' + message.fen);
+          // you can still use depth, or switch to "go movetime X"
+          stockfish.postMessage('go depth ' + (message.depth || 15));
+        } else if (message.type === 'stop_analysis') {
+          stockfish.postMessage('stop');
+        }
+      } catch (e) {
+        console.error('Error processing message:', e);
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'error',
+          message: 'Message processing error: ' + e.message
+        }));
+      }
+    }
+
+    // Start initialization
+    initStockfish();
   </script>
+</head>
+<body>
+  <div id="status">Initializing Stockfish...</div>
 </body>
 </html>
 `;
