@@ -62,7 +62,7 @@ export const getStockfishHtml = () => `
           // ✅ NEW: parse "info" lines for eval + PV
           const parsedInfo = parseInfoLine(data);
           if (parsedInfo) {
-            const { scoreType, scoreValue, pvMoves } = parsedInfo;
+            const { scoreType, scoreValue, pvMoves, multipv, depth } = parsedInfo;
 
             let evalCp = null;
             let mateIn = null;
@@ -79,6 +79,8 @@ export const getStockfishHtml = () => `
                 evalCp,                 // e.g. 34 = +0.34
                 mateIn,                 // e.g. 3 = mate in 3
                 pv: pvMoves,            // ['e2e4','e7e5','g1f3',...]
+                multipv,                // 1, 2, 3...
+                depth,
                 raw: data               // full raw line if you want
               }
             }));
@@ -86,6 +88,7 @@ export const getStockfishHtml = () => `
 
           if (data === 'readyok') {
             console.log('Stockfish engine ready');
+            document.getElementById('status').innerText = 'Engine Ready';
             window.ReactNativeWebView.postMessage(JSON.stringify({
               type: 'engine_ready'
             }));
@@ -148,8 +151,11 @@ export const getStockfishHtml = () => `
             message: 'Starting analysis for FEN: ' + message.fen
           }));
           
+          stockfish.postMessage('stop');
+          // Wait a tiny bit or just send subsequent commands? UCI queues them.
+          stockfish.postMessage('setoption name MultiPV value 3');
+          stockfish.postMessage('setoption name Ponder value false'); 
           stockfish.postMessage('position fen ' + message.fen);
-          // you can still use depth, or switch to "go movetime X"
           stockfish.postMessage('go depth ' + (message.depth || 15));
         } else if (message.type === 'stop_analysis') {
           stockfish.postMessage('stop');

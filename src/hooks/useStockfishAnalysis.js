@@ -44,14 +44,23 @@ const useStockfishAnalysis = (webViewRef) => {
       } else if (message.type === 'debug') {
         console.log('WebView Debug:', message.message);
       } else if (message.type === 'analysis_update') {
-          setLiveAnalysis(message.data);
+          setLiveAnalysis(prev => {
+              const newData = message.data;
+              const multipv = newData.multipv || 1;
+              const currentLines = prev || {};
+              
+              return {
+                  ...currentLines,
+                  [multipv]: newData
+              };
+          });
       }
     } catch (e) {
       console.error('Error parsing message:', e);
     }
   }, []);
 
-  const analyze = useCallback(async (pgn, options = {}) => {
+  const analyzeFen = useCallback(async (fen, options = {}) => {
     if (!engineReady) {
       throw new Error('Stockfish engine is not ready yet');
     }
@@ -59,23 +68,18 @@ const useStockfishAnalysis = (webViewRef) => {
     // Cancel any existing pending request
     if (pendingRequest.current) {
         clearTimeout(pendingRequest.current.timeout);
+        // Don't reject, just replace? Or reject. Rejecting old one is fine.
         pendingRequest.current.reject(new Error('Analysis cancelled by new request'));
         pendingRequest.current = null;
     }
 
     setIsAnalyzing(true);
-    setLiveAnalysis(null);
+    // setLiveAnalysis(null); // Optional: clear old analysis immediately or keep until new one comes? 
+    // Keeping old one might be better for UI stability, but let's clear to avoid confusion.
+    // setLiveAnalysis(null); 
     setError(null);
 
     try {
-      const { positions } = parsePGNToPositions(pgn);
-      if (!positions || !positions.length) {
-        throw new Error('Invalid or empty PGN');
-      }
-
-      const position = positions[positions.length - 1];
-      const { fen } = position;
-
       const message = JSON.stringify({
         type: 'analyze',
         fen,
@@ -105,6 +109,16 @@ const useStockfishAnalysis = (webViewRef) => {
     }
   }, [engineReady, webViewRef]);
 
+  // Keep existing analyze for compatibility but maybe deprecate it or make it use analyzeFen
+  const analyze = useCallback(async (pgn, options = {}) => {
+      const { positions } = parsePGNToPositions(pgn);
+      if (!positions || !positions.length) {
+        throw new Error('Invalid or empty PGN');
+      }
+      const position = positions[positions.length - 1];
+      return analyzeFen(position.fen, options);
+  }, [analyzeFen]);
+
   const stopAnalysis = useCallback(() => {
     const message = JSON.stringify({
       type: 'stop_analysis'
@@ -122,6 +136,7 @@ const useStockfishAnalysis = (webViewRef) => {
 
   return {
     analyze,
+    analyzeFen, // New
     analysis,
     liveAnalysis, // New return
     isAnalyzing,
