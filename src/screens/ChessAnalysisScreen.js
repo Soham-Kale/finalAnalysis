@@ -23,111 +23,111 @@ const ChessAnalysisScreen = () => {
   } = useStockfishAnalysis(stockfishWebViewRef);
 
   // Callback from PGNViewer when the board updates (user navigates moves)
-  const handleBoardMove = useCallback((fen) => {
-      if (fen) {
-        // Trigger analysis for the new position
-        analyzeFen(fen, { depth }).catch(err => console.log('Analysis trigger error:', err.message));
-      }
-  }, [analyzeFen, depth]);
+    const handleBoardMove = useCallback((fen) => {
+        if (fen) {
+            // Trigger analysis for the new position
+            analyzeFen(fen, { depth }).catch(err => console.log('Analysis trigger error:', err.message));
+        }
+    }, [analyzeFen, depth]);
 
-  return (
-    <View style={styles.container}>
-        {/* Top: Board Section */}
-        <View style={styles.boardSection}>
-            <PGNViewer 
-                pgnString={pgn} 
-                onMove={handleBoardMove} 
-            />
-        </View>
+    return (
+        <View style={styles.container}>
+            {/* Top: Board Section */}
+            <View style={styles.boardSection}>
+                <PGNViewer 
+                    pgnString={pgn} 
+                    onMove={handleBoardMove} 
+                />
+            </View>
 
-        {/* Middle: Tabs */}
-        <View style={styles.tabContainer}>
-            {['Analysis', 'Games', 'Explore'].map(tab => (
-                <TouchableOpacity 
-                    key={tab} 
-                    style={[styles.tabButton, activeTab === tab && styles.tabActive]}
-                    onPress={() => setActiveTab(tab)}
-                >
-                    <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-                </TouchableOpacity>
-            ))}
-        </View>
+            {/* Middle: Tabs */}
+            <View style={styles.tabContainer}>
+                {['Analysis', 'Games', 'Explore'].map(tab => (
+                    <TouchableOpacity 
+                        key={tab} 
+                        style={[styles.tabButton, activeTab === tab && styles.tabActive]}
+                        onPress={() => setActiveTab(tab)}
+                    >
+                        <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
 
-        {/* Bottom: Content Area */}
-        <View style={styles.contentSection}>
-            {activeTab === 'Analysis' ? (
-                <ScrollView style={styles.analysisScroll}>
-                    {/* Header Info */}
-                    <View style={styles.headerRow}>
-                        <Text style={styles.headerText}>Engine Evaluation</Text>
-                        <Text style={styles.headerInfo}>depth={Object.values(liveAnalysis || {})[0]?.depth || depth}</Text>
-                    </View>
-                    
-                    {/* Analysis Lines */}
-                    {liveAnalysis ? (
-                        <View style={styles.linesContainer}>
-                            {Object.values(liveAnalysis)
-                                .sort((a, b) => (a.multipv || 1) - (b.multipv || 1))
-                                .map((line, index) => {
-                                const score = line.mateIn 
-                                    ? (line.mateIn > 0 ? `+M${line.mateIn}` : `-M${Math.abs(line.mateIn)}`)
-                                    : (line.evalCp !== null ? (line.evalCp > 0 ? `+${(line.evalCp / 100).toFixed(2)}` : (line.evalCp / 100).toFixed(2)) : '...');
-                                
-                                return (
-                                    <View key={index} style={styles.lineRow}>
-                                        <View style={[styles.scoreContainer, (line.evalCp > 0 || line.mateIn > 0) ? styles.scorePos : styles.scoreNeg]}>
-                                            <Text style={[styles.scoreText, (line.evalCp <= 0 && !line.mateIn) && styles.scoreTextNeg]}>{score}</Text>
+            {/* Bottom: Content Area */}
+            <View style={styles.contentSection}>
+                {activeTab === 'Analysis' ? (
+                    <ScrollView style={styles.analysisScroll}>
+                        {/* Header Info */}
+                        <View style={styles.headerRow}>
+                            <Text style={styles.headerText}>Engine Evaluation</Text>
+                            <Text style={styles.headerInfo}>depth={Object.values(liveAnalysis || {})[0]?.depth || depth}</Text>
+                        </View>
+                        
+                        {/* Analysis Lines */}
+                        {liveAnalysis ? (
+                            <View style={styles.linesContainer}>
+                                {Object.values(liveAnalysis)
+                                    .sort((a, b) => (a.multipv || 1) - (b.multipv || 1))
+                                    .map((line, index) => {
+                                    const score = line.mateIn 
+                                        ? (line.mateIn > 0 ? `+M${line.mateIn}` : `-M${Math.abs(line.mateIn)}`)
+                                        : (line.evalCp !== null ? (line.evalCp > 0 ? `+${(line.evalCp / 100).toFixed(2)}` : (line.evalCp / 100).toFixed(2)) : '...');
+                                    
+                                    return (
+                                        <View key={index} style={styles.lineRow}>
+                                            <View style={[styles.scoreContainer, (line.evalCp > 0 || line.mateIn > 0) ? styles.scorePos : styles.scoreNeg]}>
+                                                <Text style={[styles.scoreText, (line.evalCp <= 0 && !line.mateIn) && styles.scoreTextNeg]}>{score}</Text>
+                                            </View>
+                                            <Text style={styles.pvText}>
+                                                {line.pv ? line.pv.join(' ') : ''}
+                                            </Text>
                                         </View>
-                                        <Text style={styles.pvText}>
-                                            {line.pv ? line.pv.join(' ') : ''}
-                                        </Text>
-                                    </View>
-                                );
-                            })}
+                                    );
+                                })}
+                            </View>
+                        ) : (
+                            <View style={styles.placeholderContainer}>
+                                <Text style={styles.placeholderText}>
+                                    {!pgn ? "Paste a PGN to start analysis" : "Waiting for engine..."}
+                                </Text>
+                                {/* !engineReady && <ActivityIndicator size="small" color="#bababa" /> */}
+                            </View>
+                        )}
+                        
+                        {/* PGN Input Area */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>PGN String</Text>
+                            <TextInput 
+                                style={styles.minInput}
+                                placeholder="Paste PGN here..." 
+                                placeholderTextColor="#666"
+                                value={pgn}
+                                onChangeText={setPgn} 
+                                multiline
+                            />
                         </View>
-                    ) : (
-                        <View style={styles.placeholderContainer}>
-                            <Text style={styles.placeholderText}>
-                                {!pgn ? "Paste a PGN to start analysis" : "Waiting for engine..."}
-                            </Text>
-                            {/* !engineReady && <ActivityIndicator size="small" color="#bababa" /> */}
-                        </View>
-                    )}
-                    
-                    {/* PGN Input Area */}
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>PGN String</Text>
-                        <TextInput 
-                            style={styles.minInput}
-                            placeholder="Paste PGN here..." 
-                            placeholderTextColor="#666"
-                            value={pgn}
-                            onChangeText={setPgn} 
-                            multiline
-                        />
+
+                    </ScrollView>
+                ) : (
+                    <View style={styles.placeholderCenter}>
+                        <Text style={styles.placeholderText}>Feature Coming Soon</Text>
                     </View>
+                )}
+            </View>
 
-                </ScrollView>
-            ) : (
-                <View style={styles.placeholderCenter}>
-                    <Text style={styles.placeholderText}>Feature Coming Soon</Text>
-                </View>
-            )}
+        {/* Visible Hidden Stockfish Worker */}
+        {/* We need this WebView to exist for Stockfish to run */}
+        <WebView
+            ref={stockfishWebViewRef}
+            originWhitelist={['*']}
+            source={{ html: getStockfishHtml() }}
+            style={styles.hidden}
+            javaScriptEnabled={true}
+            domStorageEnabled={true} // often helps
+            onMessage={handleMessage}
+        />
         </View>
-
-       {/* Visible Hidden Stockfish Worker */}
-       {/* We need this WebView to exist for Stockfish to run */}
-      <WebView
-        ref={stockfishWebViewRef}
-        originWhitelist={['*']}
-        source={{ html: getStockfishHtml() }}
-        style={styles.hidden}
-        javaScriptEnabled={true}
-        domStorageEnabled={true} // often helps
-        onMessage={handleMessage}
-      />
-    </View>
-  );
+    );
 };
 
 const styles = StyleSheet.create({
@@ -136,6 +136,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#262421',
   },
   boardSection: {
+      marginTop: 60,
       alignItems: 'center',
       backgroundColor: '#211f1d',
       paddingBottom: 0,

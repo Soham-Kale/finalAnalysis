@@ -23,11 +23,19 @@ export const getStockfishHtml = () => `
 
       const pvIndex = tokens.indexOf('pv');
       const pvMoves = pvIndex !== -1 ? tokens.slice(pvIndex + 1) : [];
+      
+      const multipvIndex = tokens.indexOf('multipv');
+      const multipv = multipvIndex !== -1 ? parseInt(tokens[multipvIndex + 1], 10) : 1;
+      
+      const depthIndex = tokens.indexOf('depth');
+      const depth = depthIndex !== -1 ? parseInt(tokens[depthIndex + 1], 10) : 0;
 
       return {
         scoreType,   // 'cp' | 'mate'
         scoreValue,  // number
-        pvMoves      // array of UCI moves: ['e2e4','e7e5',...]
+        pvMoves,     // array of UCI moves: ['e2e4','e7e5',...]
+        multipv,
+        depth
       };
     }
 
