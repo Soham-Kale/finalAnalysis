@@ -125,6 +125,11 @@ export default function PGNViewer({
             .black { background-color: #739552; } /* Lichess dark */
             .piece { width: 100%; height: 100%; background-size: cover; z-index: 2; pointer-events: none; }
             .highlight { box-shadow: inset 0 0 0 4px rgba(255, 255, 0, 0.5); }
+            .coord { position: absolute; font-size: 10px; font-weight: bold; pointer-events: none; }
+            .coord-rank { top: 2px; left: 2px; }
+            .coord-file { bottom: 0px; right: 2px; }
+            .square.white .coord { color: #739552; }
+            .square.black .coord { color: #ebecd0; }
         </style>
     </head>
     <body>
@@ -150,8 +155,26 @@ export default function PGNViewer({
                 for (let row = 0; row < 8; row++) {
                     for (let col = 0; col < 8; col++) {
                         const square = document.createElement('div');
-                        square.className = 'square ' + ((row + col) % 2 === 0 ? 'white' : 'black');
+                        const isWhite = (row + col) % 2 === 0;
+                        square.className = 'square ' + (isWhite ? 'white' : 'black');
                         square.id = 'sq-' + col + '-' + row;
+                        
+                        // Add Ranks (on left column, i.e., col 0)
+                        if (col === 0) {
+                            const rank = document.createElement('div');
+                            rank.className = 'coord coord-rank';
+                            rank.innerText = (8 - row);
+                            square.appendChild(rank);
+                        }
+                        
+                        // Add Files (on bottom row, i.e., row 7)
+                        if (row === 7) {
+                            const file = document.createElement('div');
+                            file.className = 'coord coord-file';
+                            file.innerText = String.fromCharCode(97 + col);
+                            square.appendChild(file);
+                        }
+
                         board.appendChild(square);
                     }
                 }
@@ -180,7 +203,19 @@ export default function PGNViewer({
                         }
                     }
                 });
-                // Highlight logic could use 'move' obj if fully parsed (from/to)
+
+                if (move) {
+                    const fromCol = move.from.charCodeAt(0) - 97; // 'a' -> 0
+                    const fromRow = 8 - parseInt(move.from[1]);   // '8' -> 0, '1' -> 7
+                    const toCol = move.to.charCodeAt(0) - 97;
+                    const toRow = 8 - parseInt(move.to[1]);
+                    
+                    const fromSq = document.getElementById('sq-' + fromCol + '-' + fromRow);
+                    const toSq = document.getElementById('sq-' + toCol + '-' + toRow);
+                    
+                    if (fromSq) fromSq.classList.add('highlight');
+                    if (toSq) toSq.classList.add('highlight');
+                }
             }
             window.onload = initBoard;
         </script>
@@ -232,6 +267,7 @@ const styles = StyleSheet.create({
       flexDirection: 'column',
       alignItems: 'center',
       backgroundColor: '#262421',
+      // width: '90%',
   },
   chessboardContainer: {
       backgroundColor: '#000',

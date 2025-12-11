@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import useStockfishAnalysis from '../hooks/useStockfishAnalysis';
 import { getStockfishHtml } from '../utils/stockfishHtml';
 import PGNViewer from '../components/PGNViewer';
+import EvaluationBar from '../components/EvaluationBar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -33,16 +34,31 @@ const ChessAnalysisScreen = () => {
     return (
         <View style={styles.container}>
             {/* Top: Board Section */}
+            {/* Top: Board Section */}
             <View style={styles.boardSection}>
-                <PGNViewer 
-                    pgnString={pgn} 
-                    onMove={handleBoardMove} 
-                />
+                <View style={styles.boardRow}>
+                    {/* Left: Evaluation Bar */}
+                    <View style={styles.evalBarContainer}>
+                        <EvaluationBar 
+                            score={liveAnalysis ? Object.values(liveAnalysis)[0]?.evalCp : 0} 
+                            mateIn={liveAnalysis ? Object.values(liveAnalysis)[0]?.mateIn : null}
+                        />
+                    </View>
+                    
+                    {/* Right: Board */}
+                    <View style={styles.boardWrapper}>
+                            <PGNViewer 
+                                pgnString={pgn} 
+                                onMove={handleBoardMove} 
+                            />
+                    </View>
+                </View>
             </View>
 
             {/* Middle: Tabs */}
             <View style={styles.tabContainer}>
-                {['Analysis', 'Games', 'Explore'].map(tab => (
+                {/* 'Analysis', 'Games', 'Explore' */}
+                {['Analysis'].map(tab => (
                     <TouchableOpacity 
                         key={tab} 
                         style={[styles.tabButton, activeTab === tab && styles.tabActive]}
@@ -136,11 +152,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#262421',
   },
   boardSection: {
-      marginTop: 60,
+      marginTop: 40,
       alignItems: 'center',
       backgroundColor: '#211f1d',
       paddingBottom: 0,
+      width: '100%',
   },
+  boardRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      width: '100%',
+      paddingHorizontal: 10,
+  },
+  evalBarContainer: {
+      height: SCREEN_WIDTH - 20, // Match board height roughly
+      justifyContent: 'center',
+      marginRight: 8,
+  },
+  boardWrapper: {
+      // Container for the board 
+    }, 
   tabContainer: {
       flexDirection: 'row',
       backgroundColor: '#211f1d',
