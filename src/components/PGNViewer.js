@@ -13,7 +13,8 @@ const ICON_SIZE = SCREEN_WIDTH * 0.06;
 export default function PGNViewer({
   pgnString = "",
   onMove = null, // Callback when move changes: (fen) => void
-  viewOnly = false
+  viewOnly = false,
+  boardSize = SCREEN_WIDTH // Default to full width if not provided
 }) {
   // const { colors } = useTheme();
   // Mock colors if useTheme not available, or just hardcode for now to match dark theme requested
@@ -119,7 +120,7 @@ export default function PGNViewer({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <style>
             body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #262421; display: flex; justify-content: center; align-items: center; }
-            #board { width: 100vw; height: 100vw; max-width: 100vh; max-height: 100vh; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
+            #board { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }
             .square { display: flex; justify-content: center; align-items: center; position: relative; }
             .white { background-color: #ebecd0; } /* Lichess light */
             .black { background-color: #739552; } /* Lichess dark */
@@ -225,7 +226,7 @@ export default function PGNViewer({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.chessboardContainer, { width: SCREEN_WIDTH, height: SCREEN_WIDTH }]}>
+      <View style={[styles.chessboardContainer, { width: boardSize, height: boardSize }]}>
         <WebView
             ref={webViewRef}
             originWhitelist={['*']}

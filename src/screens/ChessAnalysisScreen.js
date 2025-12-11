@@ -23,37 +23,46 @@ const ChessAnalysisScreen = () => {
     handleMessage
   } = useStockfishAnalysis(stockfishWebViewRef);
 
-  // Callback from PGNViewer when the board updates (user navigates moves)
-    const handleBoardMove = useCallback((fen) => {
-        if (fen) {
-            // Trigger analysis for the new position
-            analyzeFen(fen, { depth }).catch(err => console.log('Analysis trigger error:', err.message));
-        }
-    }, [analyzeFen, depth]);
+  // Layout constants
+  const EVAL_BAR_WIDTH = 24;
+  const GAP = 8; // Margin between bar and board
+  const PADDING = 10; // Screen padding
+  // Available width for board = Screen - Bar - Gap - Padding*2 (if centered) or just Padding
+  // Actually style uses paddingHorizontal: 10.
+  const TOTAL_HORIZONTAL_PADDING = 20; 
+  const BOARD_SIZE = SCREEN_WIDTH - EVAL_BAR_WIDTH - GAP - TOTAL_HORIZONTAL_PADDING;
 
-    return (
-        <View style={styles.container}>
-            {/* Top: Board Section */}
-            {/* Top: Board Section */}
-            <View style={styles.boardSection}>
-                <View style={styles.boardRow}>
-                    {/* Left: Evaluation Bar */}
-                    <View style={styles.evalBarContainer}>
-                        <EvaluationBar 
-                            score={liveAnalysis ? Object.values(liveAnalysis)[0]?.evalCp : 0} 
-                            mateIn={liveAnalysis ? Object.values(liveAnalysis)[0]?.mateIn : null}
+  // Callback from PGNViewer when the board updates (user navigates moves)
+  const handleBoardMove = useCallback((fen) => {
+      if (fen) {
+        // Trigger analysis for the new position
+        analyzeFen(fen, { depth }).catch(err => console.log('Analysis trigger error:', err.message));
+      }
+  }, [analyzeFen, depth]);
+
+  return (
+    <View style={styles.container}>
+        {/* Top: Board Section */}
+        <View style={styles.boardSection}>
+            <View style={styles.boardRow}>
+                {/* Left: Evaluation Bar */}
+                <View style={[styles.evalBarContainer, { height: BOARD_SIZE, width: EVAL_BAR_WIDTH, marginRight: GAP }]}>
+                    <EvaluationBar 
+                        score={liveAnalysis ? Object.values(liveAnalysis)[0]?.evalCp : 0} 
+                        mateIn={liveAnalysis ? Object.values(liveAnalysis)[0]?.mateIn : null}
+                    />
+                </View>
+                
+                {/* Right: Board */}
+                <View style={[styles.boardWrapper, { width: BOARD_SIZE, height: BOARD_SIZE }]}>
+                        <PGNViewer 
+                            pgnString={pgn} 
+                            onMove={handleBoardMove} 
+                            boardSize={BOARD_SIZE}
                         />
-                    </View>
-                    
-                    {/* Right: Board */}
-                    <View style={styles.boardWrapper}>
-                            <PGNViewer 
-                                pgnString={pgn} 
-                                onMove={handleBoardMove} 
-                            />
-                    </View>
                 </View>
             </View>
+        </View>
 
             {/* Middle: Tabs */}
             <View style={styles.tabContainer}>
@@ -150,6 +159,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#262421',
+    marginTop: 20,
   },
   boardSection: {
       marginTop: 40,
@@ -163,21 +173,21 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       alignItems: 'flex-start',
       width: '100%',
-      paddingHorizontal: 10,
+      // Padding handled by calculation
   },
   evalBarContainer: {
-      height: SCREEN_WIDTH - 20, // Match board height roughly
       justifyContent: 'center',
-      marginRight: 8,
+      // Height/Width set inline
   },
   boardWrapper: {
-      // Container for the board 
-    }, 
+      // Dimensions set inline
+  }, 
   tabContainer: {
       flexDirection: 'row',
       backgroundColor: '#211f1d',
       borderBottomWidth: 1,
       borderBottomColor: '#302e2c',
+      marginTop: 80,
   },
   tabButton: {
       flex: 1,
