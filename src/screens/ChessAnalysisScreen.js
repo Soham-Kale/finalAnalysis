@@ -5,6 +5,7 @@ import useStockfishAnalysis from '../hooks/useStockfishAnalysis';
 import { getStockfishHtml } from '../utils/stockfishHtml';
 import PGNViewer from '../components/PGNViewer';
 import EvaluationBar from '../components/EvaluationBar';
+import MoveList from '../components/MoveList';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -12,7 +13,8 @@ const ChessAnalysisScreen = () => {
   // Default PGN to start position or user prompt
   const [pgn, setPgn] = useState(''); 
   const [depth, setDepth] = useState(15);
-  const [activeTab, setActiveTab] = useState('Analysis'); // 'Analysis', 'Games', 'Explore'
+  const [activeTab, setActiveTab] = useState('Analysis');
+  const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
 
   const stockfishWebViewRef = useRef(null);
 
@@ -33,10 +35,11 @@ const ChessAnalysisScreen = () => {
   const BOARD_SIZE = SCREEN_WIDTH - EVAL_BAR_WIDTH - GAP - TOTAL_HORIZONTAL_PADDING;
 
   // Callback from PGNViewer when the board updates (user navigates moves)
-  const handleBoardMove = useCallback((fen) => {
+  const handleBoardMove = useCallback((fen, moveIndex) => {
       if (fen) {
         // Trigger analysis for the new position
         analyzeFen(fen, { depth }).catch(err => console.log('Analysis trigger error:', err.message));
+        setCurrentMoveIndex(moveIndex);
       }
   }, [analyzeFen, depth]);
 
@@ -131,6 +134,12 @@ const ChessAnalysisScreen = () => {
                                 multiline
                             />
                         </View>
+                        
+                        {/* NEW: Move List */}
+                        <MoveList 
+                            pgn={pgn} 
+                            currentMoveIndex={currentMoveIndex}
+                        />
 
                     </ScrollView>
                 ) : (
