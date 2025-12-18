@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, TextInput, ActivityIndicator, Alert, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import useStockfishAnalysis from '../hooks/useStockfishAnalysis';
 import { getStockfishHtml } from '../utils/stockfishHtml';

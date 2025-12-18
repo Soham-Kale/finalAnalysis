@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Dimensions, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { SafeAreaView } from 'react-native';
 // import { useTheme } from '@react-navigation/native'; // Assume navigation is set up
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { Chess } from 'chess.js';
-
-const BUTTON_SIZE = SCREEN_WIDTH * 0.13;
-const ICON_SIZE = SCREEN_WIDTH * 0.06;
 
 export default function PGNViewer({
   pgnString = "",
@@ -16,9 +12,6 @@ export default function PGNViewer({
   viewOnly = false,
   boardSize = SCREEN_WIDTH // Default to full width if not provided
 }) {
-  // const { colors } = useTheme();
-  // Mock colors if useTheme not available, or just hardcode for now to match dark theme requested
-  const colors = { background: '#262421', text: '#fff' };
 
   const autoplayRef = useRef(null);
   const webViewRef = useRef(null);
@@ -32,14 +25,15 @@ export default function PGNViewer({
     try {
       chess.loadPgn(safe);
     } catch {
-      chess.load(safe); // try loading as FEN? No, loadPgn is specific.
-      // If failed, maybe it's just a new game
+      // If loadPgn fails, it might be an empty string or invalid PGN.
+      // We'll proceed with a new game.
     }
 
     const verbose = chess.history({ verbose: true }) || [];
-    const c2 = new Chess();
-    const outFens = [c2.fen()];
-    const outMoves = [null];
+    const c2 = new Chess(); // Use a fresh Chess instance to build FENs from scratch
+    const outFens = [c2.fen()]; // Always start with the initial FEN
+    const outMoves = [null]; // The "move" to reach the initial FEN is null
+
     for (const mv of verbose) {
       c2.move(mv);
       outFens.push(c2.fen());
@@ -59,9 +53,17 @@ export default function PGNViewer({
 
   useEffect(() => {
     if (webViewLoaded && webViewRef.current && fens[moveIndex]) {
-      updateBoardPosition(fens[moveIndex], moves[moveIndex]);
+      // Current State: fens[moveIndex]
+      // Last Move: moves[moveIndex] (The move that created this state)
+      // Next Move: moves[moveIndex + 1] (The move that will create the next state)
+      
+      const lastMove = moveIndex > 0 ? moves[moveIndex] : null;
+      const nextMove = (moveIndex + 1) < moves.length ? moves[moveIndex + 1] : null;
+      
+      updateBoardPosition(fens[moveIndex], lastMove, nextMove);
+      
       if (onMove) {
-          onMove(fens[moveIndex]);
+          onMove(fens[moveIndex], moveIndex);
       }
     }
   }, [moveIndex, webViewLoaded, fens, moves]);
@@ -101,27 +103,19 @@ export default function PGNViewer({
     }
   };
 
-  const updateBoardPosition = (fen, move) => {
+  const updateBoardPosition = (fen, lastMove, nextMove) => {
     if (webViewRef.current) {
       const script = `
         if (typeof updatePosition === 'function') {
-            updatePosition(${JSON.stringify(fen)}, ${JSON.stringify(move)});
+            updatePosition(
+                ${JSON.stringify(fen)}, 
+                ${JSON.stringify(lastMove)}, 
+                ${JSON.stringify(nextMove)}
+            );
         }
         true;
       `;
       webViewRef.current.injectJavaScript(script);
-    }
-  };
-
-  // Handle messages from WebView
-  const handleMessage = (event) => {
-    try {
-        const data = JSON.parse(event.nativeEvent.data);
-        if (data.type === 'webViewLoaded') {
-            setWebViewLoaded(true);
-        }
-    } catch (e) {
-        console.log('Error parsing WebView message', e);
     }
   };
 
@@ -142,10 +136,19 @@ export default function PGNViewer({
             .coord-rank { top: 2px; left: 2px; }
             .coord-file { bottom: 0px; right: 2px; }
             .square.black .coord { color: #ebecd0; }
+            #arrow-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         </style>
     </head>
     <body>
         <div id="board"></div>
+        <svg id="arrow-layer" viewBox="0 0 100 100">
+            <defs>
+                <marker id="arrowhead" markerWidth="6" markerHeight="7" refX="0" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+                    <polygon points="0 0, 6 3.5, 0 7" fill="#46c3f2" opacity="0.9" />
+                </marker>
+            </defs>
+            <g id="arrows-g"></g>
+        </svg>
         <script>
             const pieceImages = {
                 'wK': 'https://lichess1.org/assets/_Qyw6Qk/piece/cburnett/wK.svg',
@@ -161,6 +164,60 @@ export default function PGNViewer({
                 'bN': 'https://lichess1.org/assets/_Qyw6Qk/piece/cburnett/bN.svg',
                 'bP': 'https://lichess1.org/assets/_Qyw6Qk/piece/cburnett/bP.svg'
             };
+
+            function getSquareDetails(sq) {
+                // sq is 'e2'
+                const file = sq.charCodeAt(0) - 97; // 0-7
+                const rank = 8 - parseInt(sq[1]);   // 0-7 (row 0 is rank 8)
+                // Center of square in %
+                const x = (file * 12.5) + 6.25;
+                const y = (rank * 12.5) + 6.25;
+                return { x, y };
+            }
+
+            function drawArrows(arrows) {
+                const group = document.getElementById('arrows-g');
+                if (!group) return;
+                group.innerHTML = ''; 
+
+                if (!arrows || !Array.isArray(arrows)) return;
+
+                arrows.forEach(arrow => {
+                    const start = getSquareDetails(arrow.from);
+                    const end = getSquareDetails(arrow.to); 
+                    
+                    // Calculate vector
+                    const dx = end.x - start.x;
+                    const dy = end.y - start.y;
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Shorten line by head length (6 units)
+                    const headLength = 6; 
+                    const shortLen = Math.max(0, len - headLength);
+                    const ratio = len > 0 ? (shortLen / len) : 0;
+                    
+                    const shortEnd = {
+                        x: start.x + dx * ratio,
+                        y: start.y + dy * ratio
+                    };
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', start.x);
+                    line.setAttribute('y1', start.y);
+                    line.setAttribute('x2', shortEnd.x);
+                    line.setAttribute('y2', shortEnd.y);
+                    line.setAttribute('stroke', arrow.color || '#46c3f2');
+                    line.setAttribute('stroke-width', '3.2'); 
+                    line.setAttribute('opacity', '0.9');
+                    line.setAttribute('marker-end', 'url(#arrowhead)');
+                    
+                    if (arrow.color) {
+                         line.setAttribute('stroke', arrow.color);
+                    }
+                    group.appendChild(line);
+                });
+            }
+
             function initBoard() {
                 const board = document.getElementById('board');
                 board.innerHTML = '';
@@ -171,7 +228,6 @@ export default function PGNViewer({
                         square.className = 'square ' + (isWhite ? 'white' : 'black');
                         square.id = 'sq-' + col + '-' + row;
                         
-                        // Add Ranks (on left column, i.e., col 0)
                         if (col === 0) {
                             const rank = document.createElement('div');
                             rank.className = 'coord coord-rank';
@@ -179,7 +235,6 @@ export default function PGNViewer({
                             square.appendChild(rank);
                         }
                         
-                        // Add Files (on bottom row, i.e., row 7)
                         if (row === 7) {
                             const file = document.createElement('div');
                             file.className = 'coord coord-file';
@@ -192,41 +247,60 @@ export default function PGNViewer({
                 }
                 window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'webViewLoaded' }));
             }
-            function updatePosition(fen, move) {
-                const rows = fen.split(' ')[0].split('/');
-                document.querySelectorAll('.piece').forEach(el => el.remove());
-                document.querySelectorAll('.square').forEach(el => el.classList.remove('highlight'));
+            function updatePosition(fen, lastMove, nextMove) {
+                const board = document.getElementById('board');
                 
+                // Clear all existing pieces first
+                document.querySelectorAll('.piece').forEach(el => el.remove());
+
+                // Parse FEN and update pieces
+                // Simple parser since we just place images
+                const rows = fen.split(' ')[0].split('/');
                 rows.forEach((rowStr, rowIndex) => {
                     let colIndex = 0;
-                    for (const char of rowStr) {
-                        if (isNaN(char)) {
-                            const sq = document.getElementById('sq-' + colIndex + '-' + rowIndex);
-                            if (sq) {
-                                const p = document.createElement('div');
-                                p.className = 'piece';
-                                const color = char === char.toUpperCase() ? 'w' : 'b';
-                                p.style.backgroundImage = 'url(' + pieceImages[color + char.toUpperCase()] + ')';
-                                sq.appendChild(p);
+                    for (let i = 0; i < rowStr.length; i++) {
+                        const char = rowStr[i];
+                        if (!isNaN(char)) {
+                            colIndex += parseInt(char);
+                        } else {
+                            const square = document.getElementById('sq-' + colIndex + '-' + rowIndex);
+                            if (square) {
+                                // Clear existing piece (redundant if all cleared at start, but good for robustness)
+                                const existing = square.querySelector('.piece');
+                                if (existing) existing.remove();
+                                
+                                const color = (char === char.toUpperCase()) ? 'w' : 'b';
+                                const type = char.toUpperCase();
+                                const pieceCode = color + type; // wK, bQ etc
+                                
+                                if (pieceImages[pieceCode]) {
+                                    const img = document.createElement('div');
+                                    img.className = 'piece';
+                                    img.style.backgroundImage = 'url(' + pieceImages[pieceCode] + ')';
+                                    square.appendChild(img);
+                                }
                             }
                             colIndex++;
-                        } else {
-                            colIndex += parseInt(char);
                         }
                     }
                 });
-
-                if (move) {
-                    const fromCol = move.from.charCodeAt(0) - 97; // 'a' -> 0
-                    const fromRow = 8 - parseInt(move.from[1]);   // '8' -> 0, '1' -> 7
-                    const toCol = move.to.charCodeAt(0) - 97;
-                    const toRow = 8 - parseInt(move.to[1]);
-                    
-                    const fromSq = document.getElementById('sq-' + fromCol + '-' + fromRow);
-                    const toSq = document.getElementById('sq-' + toCol + '-' + toRow);
-                    
+                
+                // Clear previous highlights
+                document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+                
+                // Highlight Last Move
+                if (lastMove) {
+                    const fromSq = document.getElementById('sq-' + (lastMove.from.charCodeAt(0) - 97) + '-' + (8 - parseInt(lastMove.from[1])));
+                    const toSq = document.getElementById('sq-' + (lastMove.to.charCodeAt(0) - 97) + '-' + (8 - parseInt(lastMove.to[1])));
                     if (fromSq) fromSq.classList.add('highlight');
                     if (toSq) toSq.classList.add('highlight');
+                }
+                
+                // Draw Arrow for Next Move (User Request: "before take move")
+                if (nextMove) {
+                     drawArrows([{ from: nextMove.from, to: nextMove.to, color: '#46c3f2' }]); 
+                } else {
+                     drawArrows([]);
                 }
             }
             window.onload = initBoard;
@@ -279,7 +353,6 @@ const styles = StyleSheet.create({
       flexDirection: 'column',
       alignItems: 'center',
       backgroundColor: '#262421',
-      // width: '90%',
   },
   chessboardContainer: {
       backgroundColor: '#000',
