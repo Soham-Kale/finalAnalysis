@@ -17,20 +17,17 @@ const ChessAnalysisScreen = () => {
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
 
   const stockfishWebViewRef = useRef(null);
+  const pgnViewerRef = useRef(null); // Added ref
 
   const {
     analyzeFen,
     liveAnalysis,
-    engineReady,
     handleMessage
   } = useStockfishAnalysis(stockfishWebViewRef);
 
   // Layout constants
   const EVAL_BAR_WIDTH = 24;
   const GAP = 8; // Margin between bar and board
-  const PADDING = 10; // Screen padding
-  // Available width for board = Screen - Bar - Gap - Padding*2 (if centered) or just Padding
-  // Actually style uses paddingHorizontal: 10.
   const TOTAL_HORIZONTAL_PADDING = 20; 
   const BOARD_SIZE = SCREEN_WIDTH - EVAL_BAR_WIDTH - GAP - TOTAL_HORIZONTAL_PADDING;
 
@@ -59,6 +56,7 @@ const ChessAnalysisScreen = () => {
                 {/* Right: Board */}
                 <View style={[styles.boardWrapper, { width: BOARD_SIZE, height: BOARD_SIZE }]}>
                         <PGNViewer 
+                            ref={pgnViewerRef} // Connected ref
                             pgnString={pgn} 
                             onMove={handleBoardMove} 
                             boardSize={BOARD_SIZE}
@@ -84,7 +82,10 @@ const ChessAnalysisScreen = () => {
             {/* Bottom: Content Area */}
             <View style={styles.contentSection}>
                 {activeTab === 'Analysis' ? (
-                    <ScrollView style={styles.analysisScroll}>
+                    <ScrollView 
+                        style={styles.analysisScroll}
+                        contentContainerStyle={{ paddingBottom: 80 }} // Added padding for fixed bar
+                    >
                         {/* Header Info */}
                         <View style={styles.headerRow}>
                             <Text style={styles.headerText}>Engine Evaluation</Text>
@@ -149,6 +150,25 @@ const ChessAnalysisScreen = () => {
                 )}
             </View>
 
+        {/* Fixed Bottom Controls */}
+        <View style={styles.fixedBottomBar}>
+            <TouchableOpacity onPress={() => pgnViewerRef.current?.goToStart()} style={styles.controlBtn}>
+                <Text style={styles.controlBtnText}>|&lt;</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => pgnViewerRef.current?.goToPrevious()} style={styles.controlBtn}>
+                <Text style={styles.controlBtnText}>&lt;</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => pgnViewerRef.current?.handlePlayPause()} style={styles.controlBtn}>
+                <Text style={styles.controlBtnText}>Play/Pause</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => pgnViewerRef.current?.goToNext()} style={styles.controlBtn}>
+                <Text style={styles.controlBtnText}>&gt;</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => pgnViewerRef.current?.goToEnd()} style={styles.controlBtn}>
+                <Text style={styles.controlBtnText}>&gt;|</Text>
+            </TouchableOpacity>
+        </View>
+
         {/* Visible Hidden Stockfish Worker */}
         {/* We need this WebView to exist for Stockfish to run */}
         <WebView
@@ -195,7 +215,7 @@ const styles = StyleSheet.create({
       backgroundColor: '#211f1d',
       borderBottomWidth: 1,
       borderBottomColor: '#302e2c',
-      marginTop: 80,
+      marginTop: 10,
   },
   tabButton: {
       flex: 1,
@@ -320,6 +340,31 @@ const styles = StyleSheet.create({
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+  },
+  fixedBottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+      backgroundColor: '#211f1d',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      borderTopWidth: 1,
+      borderTopColor: '#302e2c',
+      elevation: 10,
+      zIndex: 100,
+  },
+  controlBtn: {
+      padding: 10,
+      minWidth: 50,
+      alignItems: 'center',
+  },
+  controlBtnText: {
+      color: '#bababa',
+      fontSize: 18,
+      fontWeight: 'bold',
   }
 });
 

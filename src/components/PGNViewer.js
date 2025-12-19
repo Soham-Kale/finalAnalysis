@@ -1,17 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Text, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-// import { useTheme } from '@react-navigation/native'; // Assume navigation is set up
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { Chess } from 'chess.js';
 
-export default function PGNViewer({
-  pgnString = "",
-  onMove = null, // Callback when move changes: (fen) => void
-  viewOnly = false,
-  boardSize = SCREEN_WIDTH // Default to full width if not provided
-}) {
+const PGNViewer = forwardRef((props, ref) => {
+  const {
+    pgnString = "",
+    onMove = null, // Callback when move changes: (fen) => void
+    boardSize = SCREEN_WIDTH // Default to full width if not provided
+  } = props;
 
   const autoplayRef = useRef(null);
   const webViewRef = useRef(null);
@@ -21,12 +20,11 @@ export default function PGNViewer({
 
   const { fens, moves } = useMemo(() => {
     const chess = new Chess();
-    const safe = pgnString || '';
+    const safe = (pgnString || '').trim();
     try {
       chess.loadPgn(safe);
     } catch {
       // If loadPgn fails, it might be an empty string or invalid PGN.
-      // We'll proceed with a new game.
     }
 
     const verbose = chess.history({ verbose: true }) || [];
@@ -48,15 +46,10 @@ export default function PGNViewer({
     stopAutoplay();
     setMoveIndex(0);
     setIsPlaying(false);
-    // setWebViewLoaded(false); // Don't reset loaded state, just update position
   }, [pgnString]);
 
   useEffect(() => {
     if (webViewLoaded && webViewRef.current && fens[moveIndex]) {
-      // Current State: fens[moveIndex]
-      // Last Move: moves[moveIndex] (The move that created this state)
-      // Next Move: moves[moveIndex + 1] (The move that will create the next state)
-      
       const lastMove = moveIndex > 0 ? moves[moveIndex] : null;
       const nextMove = (moveIndex + 1) < moves.length ? moves[moveIndex + 1] : null;
       
@@ -102,6 +95,15 @@ export default function PGNViewer({
       setIsPlaying(prev => !prev);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+      goToStart,
+      goToPrevious,
+      goToNext,
+      goToEnd,
+      handlePlayPause,
+      get isPlaying() { return isPlaying; }
+  }));
 
   const updateBoardPosition = (fen, lastMove, nextMove) => {
     if (webViewRef.current) {
@@ -298,9 +300,9 @@ export default function PGNViewer({
                 
                 // Draw Arrow for Next Move (User Request: "before take move")
                 if (nextMove) {
-                     drawArrows([{ from: nextMove.from, to: nextMove.to, color: '#46c3f2' }]); 
+                  drawArrows([{ from: nextMove.from, to: nextMove.to, color: '#46c3f2' }]); 
                 } else {
-                     drawArrows([]);
+                  drawArrows([]);
                 }
             }
             window.onload = initBoard;
@@ -335,18 +337,11 @@ export default function PGNViewer({
             </View>
         )}
       </View>
-
-      {/* Controls */}
-      <View style={styles.controls}>
-          <TouchableOpacity onPress={goToStart} style={styles.btn}><Text style={styles.btnText}>|&lt;</Text></TouchableOpacity>
-          <TouchableOpacity onPress={goToPrevious} style={styles.btn}><Text style={styles.btnText}>&lt;</Text></TouchableOpacity>
-          <TouchableOpacity onPress={handlePlayPause} style={styles.btn}><Text style={styles.btnText}>{isPlaying ? '||' : '>'}</Text></TouchableOpacity>
-          <TouchableOpacity onPress={goToNext} style={styles.btn}><Text style={styles.btnText}>&gt;</Text></TouchableOpacity>
-          <TouchableOpacity onPress={goToEnd} style={styles.btn}><Text style={styles.btnText}>&gt;|</Text></TouchableOpacity>
-      </View>
     </View>
   );
-}
+});
+
+export default PGNViewer;
 
 const styles = StyleSheet.create({
   container: {
@@ -366,24 +361,5 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: '#262421',
-  },
-  controls: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      width: '100%',
-      padding: 10,
-      backgroundColor: '#262421',
-  },
-  btn: {
-      padding: 10,
-      backgroundColor: '#302e2c',
-      borderRadius: 5,
-      minWidth: 40,
-      alignItems: 'center',
-  },
-  btnText: {
-      color: '#bababa',
-      fontSize: 18,
-      fontWeight: 'bold',
   }
 });
