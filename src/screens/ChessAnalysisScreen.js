@@ -168,7 +168,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#262421',
-    marginTop: 20,
   },
   boardSection: {
       marginTop: 40,

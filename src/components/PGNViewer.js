@@ -212,7 +212,7 @@ export default function PGNViewer({
                     line.setAttribute('marker-end', 'url(#arrowhead)');
                     
                     if (arrow.color) {
-                         line.setAttribute('stroke', arrow.color);
+                      line.setAttribute('stroke', arrow.color);
                     }
                     group.appendChild(line);
                 });

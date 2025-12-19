@@ -1,6 +1,7 @@
 import React from 'react';
-import { SafeAreaView, StyleSheet, StatusBar } from 'react-native';
+import { StyleSheet, StatusBar } from 'react-native';
 import ChessAnalysisScreen from './src/screens/ChessAnalysisScreen';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function App() {
   return (
