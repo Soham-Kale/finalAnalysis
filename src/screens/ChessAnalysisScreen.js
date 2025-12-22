@@ -43,6 +43,9 @@ const ChessAnalysisScreen = () => {
   return (
     <View style={styles.container}>
         {/* Top: Board Section */}
+
+        <Text style={styles.headerText2}>Stockfish Analysis</Text>
+
         <View style={styles.boardSection}>
             <View style={styles.boardRow}>
                 {/* Left: Evaluation Bar */}
@@ -84,7 +87,6 @@ const ChessAnalysisScreen = () => {
                 {activeTab === 'Analysis' ? (
                     <ScrollView 
                         style={styles.analysisScroll}
-                        contentContainerStyle={{ paddingBottom: 80 }} // Added padding for fixed bar
                     >
                         {/* Header Info */}
                         <View style={styles.headerRow}>
@@ -159,7 +161,7 @@ const ChessAnalysisScreen = () => {
                 <Text style={styles.controlBtnText}>&lt;</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => pgnViewerRef.current?.handlePlayPause()} style={styles.controlBtn}>
-                <Text style={styles.controlBtnText}>Play/Pause</Text>
+                <Text style={styles.controlBtnText}>▶</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => pgnViewerRef.current?.goToNext()} style={styles.controlBtn}>
                 <Text style={styles.controlBtnText}>&gt;</Text>
@@ -185,187 +187,194 @@ const ChessAnalysisScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#262421',
-  },
-  boardSection: {
-      marginTop: 40,
-      alignItems: 'center',
-      backgroundColor: '#211f1d',
-      paddingBottom: 0,
-      width: '100%',
-  },
-  boardRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-      width: '100%',
-      // Padding handled by calculation
-  },
-  evalBarContainer: {
-      justifyContent: 'center',
-      // Height/Width set inline
-  },
-  boardWrapper: {
-      // Dimensions set inline
-  }, 
-  tabContainer: {
-      flexDirection: 'row',
-      backgroundColor: '#211f1d',
-      borderBottomWidth: 1,
-      borderBottomColor: '#302e2c',
-      marginTop: 10,
-  },
-  tabButton: {
-      flex: 1,
-      paddingVertical: 12,
-      alignItems: 'center',
-  },
-  tabActive: {
-      borderBottomWidth: 2,
-      borderBottomColor: '#81b64c', // Chess.com Green
-  },
-  tabText: {
-      color: '#bababa',
-      fontWeight: '600',
-      fontSize: 14,
-  },
-  tabTextActive: {
-      color: '#fff',
-  },
-  contentSection: {
-      flex: 1,
-      backgroundColor: '#262421',
-  },
-  analysisScroll: {
-      flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 10,
-    backgroundColor: '#302e2c',
-  },
-  headerText: {
-    color: '#bababa',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  headerInfo: {
-    color: '#bababa',
-    fontSize: 12,
-  },
-  linesContainer: {
-     padding: 0,
-  },
-  lineRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#302e2c',
-    alignItems: 'flex-start',
-  },
-  scoreContainer: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    marginRight: 10,
-    minWidth: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scorePos: {
-      backgroundColor: '#fff', 
-  },
-  scoreNeg: {
-      backgroundColor: '#403d39', 
-      borderWidth: 1,
-      borderColor: '#666',
-  },
-  scoreText: {
-    color: '#000', 
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  scoreTextNeg: {
-      color: '#fff',
-  },
-  pvText: {
-    color: '#bababa', // Light gray standard
-    flex: 1,
-    fontFamily: 'monospace',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  inputContainer: {
-      padding: 16,
-      borderTopWidth: 1,
-      borderTopColor: '#302e2c',
-      marginTop: 20,
-  },
-  inputLabel: {
-      color: '#666',
-      fontSize: 12,
-      marginBottom: 8,
-      fontWeight: '600',
-  },
-  minInput: {
-      color: '#fff',
-      backgroundColor: '#302e2c',
-      padding: 10,
-      borderRadius: 6,
-      minHeight: 60,
-      textAlignVertical: 'top',
-      fontFamily: 'monospace',
-      fontSize: 12,
-  },
-  placeholderContainer: {
-      padding: 20,
-      alignItems: 'center',
-  },
-  placeholderText: {
-      color: '#666',
-      fontStyle: 'italic',
-  },
-  hidden: {
-    width: 0,
-    height: 0,
-    opacity: 0,
-    position: 'absolute',
-    top: -1000, 
-  },
-  placeholderCenter: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  fixedBottomBar: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 60,
-      backgroundColor: '#211f1d',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-around',
-      borderTopWidth: 1,
-      borderTopColor: '#302e2c',
-      elevation: 10,
-      zIndex: 100,
-  },
-  controlBtn: {
-      padding: 10,
-      minWidth: 50,
-      alignItems: 'center',
-  },
-  controlBtnText: {
-      color: '#bababa',
-      fontSize: 18,
-      fontWeight: 'bold',
-  }
+    container: {
+        flex: 1,
+        backgroundColor: '#262421',
+    },
+    headerText2: {
+        color: '#ffff',
+        fontWeight: '600',
+        fontSize: 20,
+        textAlign: 'center',
+        marginTop: 15,
+    },
+    boardSection: {
+        marginTop: 20,
+        alignItems: 'center',
+        backgroundColor: '#211f1d',
+        paddingBottom: 0,
+        width: '100%',
+    },
+    boardRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        width: '100%',
+        // Padding handled by calculation
+    },
+    evalBarContainer: {
+        justifyContent: 'center',
+        // Height/Width set inline
+    },
+    boardWrapper: {
+        // Dimensions set inline
+    }, 
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#211f1d',
+        borderBottomWidth: 1,
+        borderBottomColor: '#302e2c',
+        marginTop: 10,
+    },
+    tabButton: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    tabActive: {
+        borderBottomWidth: 2,
+        borderBottomColor: '#81b64c', // Chess.com Green
+    },
+    tabText: {
+        color: '#bababa',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    tabTextActive: {
+        color: '#fff',
+    },
+    contentSection: {
+        flex: 5,
+        backgroundColor: '#262421',
+    },
+    analysisScroll: {
+        flex: 1,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        padding: 10,
+        backgroundColor: '#302e2c',
+    },
+    headerText: {
+        color: '#bababa',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    headerInfo: {
+        color: '#bababa',
+        fontSize: 12,
+    },
+    linesContainer: {
+        padding: 0,
+    },
+    lineRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#302e2c',
+        alignItems: 'flex-start',
+    },
+    scoreContainer: {
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 4,
+        marginRight: 10,
+        minWidth: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    scorePos: {
+        backgroundColor: '#fff', 
+    },
+    scoreNeg: {
+        backgroundColor: '#403d39', 
+        borderWidth: 1,
+        borderColor: '#666',
+    },
+    scoreText: {
+        color: '#000', 
+        fontWeight: 'bold',
+        fontSize: 12,
+    },
+    scoreTextNeg: {
+        color: '#fff',
+    },
+    pvText: {
+        color: '#bababa', // Light gray standard
+        flex: 1,
+        fontFamily: 'monospace',
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    inputContainer: {
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#302e2c',
+        marginTop: 20,
+    },
+    inputLabel: {
+        color: '#666',
+        fontSize: 12,
+        marginBottom: 8,
+        fontWeight: '600',
+    },
+    minInput: {
+        color: '#fff',
+        backgroundColor: '#302e2c',
+        padding: 10,
+        borderRadius: 6,
+        minHeight: 60,
+        textAlignVertical: 'top',
+        fontFamily: 'monospace',
+        fontSize: 12,
+    },
+    placeholderContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    placeholderText: {
+        color: '#666',
+        fontStyle: 'italic',
+    },
+    hidden: {
+        width: 0,
+        height: 0,
+        opacity: 0,
+        position: 'absolute',
+        top: -1000, 
+    },
+    placeholderCenter: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fixedBottomBar: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 60,
+        backgroundColor: '#211f1d',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        borderTopWidth: 1,
+        borderTopColor: '#302e2c',
+        elevation: 10,
+        zIndex: 100,
+    },
+    controlBtn: {
+        padding: 10,
+        minWidth: 50,
+        alignItems: 'center',
+    },
+    controlBtnText: {
+        color: '#bababa',
+        fontSize: 18,
+        fontWeight: 'bold',
+    }
 });
 
 export default ChessAnalysisScreen;
